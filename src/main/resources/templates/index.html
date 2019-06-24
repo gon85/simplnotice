@@ -1,0 +1,236 @@
+{{=<% %>=}}<!-- 변환 -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Notice</title>
+  
+  <link type="text/css" rel="stylesheet" href="//unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment.min.js"></script>
+
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.1/vue-router.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vuex/3.0.1/vuex.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js"></script>
+
+</head>
+<body>
+  <div class="main" id="app" style="padding:20px;" >
+    <router-view></router-view>
+  </div>
+
+
+  <div type="text/x-template" id="noticeListVue" style="display:none;">
+    <div id="list">
+      <form id="frm" name="frm" method="post"  class="form-horizontal">
+        <input type="hidden" name="currentPage" id="currentPage"  v-model="pageInfo.currentPage">
+        <input type="hidden" name="rowPerPage"  id="rowPerPage" v-model="pageInfo.rowPerPage" />
+      </from>    
+      <div class="row">
+        <div class="col-md-12">
+          <h4><span class="label label-success">총 건수 : {{$store.state.noticeListCount}}</span></h4>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <table class="table table-striped projects">
+            <thead>
+              <tr>
+                <th style="text-align: center; width:  5%">번호</th>
+                <th style="text-align: center; width: 45%">제목</th>
+                <th style="text-align: center; width: 15%">작성자</th>
+                <th style="text-align: center; width: 15%">조회수</th>
+                <th style="text-align: center; width: 20%">등록일</th>
+              </tr>
+            </thead>
+            <tbody id="trContent">
+              <tr v-for="(row, index) in this.$store.state.noticeList" >
+                <td style="text-align:center">{{row.idx}}</td>
+                <td style="text-align:left"  >
+                  <router-link :to="{ name: 'noticeDetailVue', params: { idx : row.idx }}" >
+                    {{row.title}}
+                  </router-link>
+                </td>
+                <td style="text-align:center">{{row.userNickName}}</td>
+                <td style="text-align:right" >{{row.viewCnt}}</td>
+                <td style="text-align:center">{{gdateFormat(row.createDt)}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="row">
+            <div class="col-sm-12" style="text-align: center">
+            </div>
+          </div>
+          <div class="row" style="width:100%;">
+            <my-pageing v-bind:total-row="pageInfo.totalRow" 
+                  v-bind:row-per-page="pageInfo.rowPerPage" 
+                  v-bind:current-page="pageInfo.currentPage" 
+                  :page-no-per-page="pageInfo.pageNoPerPage"
+                  @changepage="changePageByPageing"
+                  >
+            </my-pageing>
+          </div>
+          <div class="row" style="padding: 5px;">
+            <router-link :to="{ name: 'noticeDetailVue'}" class="btn btn-primary">글쓰기</router-link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div type="text/x-template" id="noticeDetailVue" style="display:none;">
+    <div>
+      <component v-bind:is="popView" @close="closePopView" @callfunc="callfunc"></component>
+      <form id="frm" name="frm" method="post"  class="form-horizontal">
+        <div class="col-sm-12">
+          <table class="table projects">
+            <thead>
+              <tr>
+                <th style="text-align: center; width: 15%">&nbsp;</th>
+                <th style="text-align: center; width: 35%">&nbsp;</th>
+                <th style="text-align: center; width: 15%">&nbsp;</th>
+                <th style="text-align: center; width: 35%">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody id="trContent">
+              <tr v-if="notice.idx > 0">
+                <td style="text-align:center; vertical-align: middle; background-color: #f9f9f9;">
+                              작성일
+                </td>
+                <td>
+                  {{gdateFormat(notice.createDt)}}
+                </td>
+                <td style="text-align:center; vertical-align: middle; background-color: #f9f9f9;">
+                              최종수정일
+                </td>
+                <td>
+                  {{gdateFormat(notice.modifyDt)}}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align:center; vertical-align: middle; background-color: #f9f9f9;">
+                            제목
+                </td>
+                <td colspan="3">
+                  <div class="form-row">
+                    <input type="text" class="form-control" id="title" name="title" v-model="notice.title" >
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align:center; vertical-align: middle;; background-color: #f9f9f9;">
+                            내용
+                </td>
+                <td colspan="3">
+                  <div class="form-row">
+                    <textarea name="ir1" id="ir1"
+                          rows="10" cols="200"
+                          v-model="notice.contents" 
+                          style="width:100%; height:412px; min-width:610px;"></textarea>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align:center; vertical-align: middle; background-color: #f9f9f9;">
+                              이용자 닉네임
+                </td>
+                <td colspan="3">
+                  <div class="form-row">
+                    <input type="text" class="form-control" id="user_nick_name" name="user_nick_name" v-model="notice.userNickName" >
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="notice.idx <= 0">
+                <td style="text-align:center; vertical-align: middle; background-color: #f9f9f9;">
+                  pw
+                </td>
+                <td colspan="3">
+                  <div class="form-row">
+                    <input type="password" class="form-control" id="user_nick_pw" name="user_nick_name" v-model="notice.userPw" >
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="4">
+                  <div style="text-align: center;">
+                    <button class="btn btn-primary" @click.stop.prevent="saveNotice()">저장</button>
+                    <button v-if="notice.idx > 0" class="btn btn-danger" @click.stop.prevent="removeNotice()">삭제</button>
+                    <router-link :to="{ name: 'noticeListVue'}" class="btn btn-light">목록(취소)</router-link>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div type="text/x-template" id="confirmPwVue" style="display:none;">
+    <div id="confirmPw"  style="text-align:center; position: absolute ; z-index: 1; background: transparent;background-color:rgba(0, 0, 0, 0.5); top:0; left:0;right:0; bottom:0; padding: 20px; border: 1px solid black;">
+      <div style="height:250px;width:500px; background: white; padding : 20px; display: inline-block; text-align:left;">
+        <h2>비밀번호 확인</h2>
+        <form name="frmConfirm" id="frmConfirm" class="form-horizontal" role="form">
+          <table class="table projects">
+            <tbody id="trContent">
+              <tr>
+                <td style="text-align:left; vertical-align: middle;">
+                  <input type="hidden" name="idx" v-model="notice.idx" />
+                  <input type="password" id="userPw" name="userPw" value=""  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <br>
+          <div class="form-group">
+            <div class="col-sm-offset-1 col-sm-11" style="text-align: center">
+              <button class="btn btn-primary" @click.stop.prevent="confirm()">확인</button>
+              <button class="btn btn-light" @click.stop.prevent="close()">취소</button>
+            </div>
+          </div>
+        
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div type="text/x-template" id="pageNavi" style="display:none;">
+    <div class="col-sm-12" style="text-align: center;">
+      <nav aria-label="Page navigation example">
+        <ul class="pagination">
+          <li v-if="prePageCnt > 0" class="page-item">
+            <a class="page-link" href="#" @click="setPage(prePageCnt)">Previous</a>
+          </li>
+          <li v-for="n in pageNums" class="page-item">
+            <a v-if="n != currentPage" href="#" @click="setPage(n)" class="page-link">{{n}}</a>
+            <strong v-if="n == currentPage"  class="page-link">{{n}}</strong>
+           </li>
+          <li v-if="nextPageCnt > 0" class="page-item">
+            <a class="page-link" href="#" @click="setPage(nextPageCnt+1)">Next</a>
+          </li>
+        </ul>
+      </nav>    
+    </div>
+<!--     
+    <div id="paging" class="dataTables_paginate paging_simple_numbers" style="width: 100%; text-align: right;">
+      <a v-if="prePageCnt > 0">[이전 10개]</a>
+      <span v-for="n in pageNums">
+        <a v-if="n != currentPage" href="#" @click="setPage(n)">{{n}}</a>
+        <strong v-if="n == currentPage">{{n}}</strong>
+      </span>
+      <a v-if="nextPageCnt > 0">[다음 10개]</a>
+    </div>
+ -->  
+  </div>
+  
+  <script type="text/javascript" src="/static/pageing.js"></script>
+  <script type="text/javascript" src="/static/index.js"></script>
+  
+  <script type="text/javascript">
+  
+  </script>
+
+</body>
+</html>
